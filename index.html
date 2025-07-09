@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>GM选品助手</title>
-  <link rel="stylesheet" href="./style.css">
   <style>
-    /* 如果 style.css 加载失败，页面也能工作 */
     body {
       font-family: sans-serif;
       background-color: #f7f7f7;
@@ -58,7 +56,7 @@
       const message = userInput.value.trim();
       if (!message) return;
 
-      chatBox.innerHTML += <p><strong>你:</strong> ${message}</p>;
+      chatBox.innerHTML += `<p><strong>你:</strong> ${message}</p>`;
       userInput.value = "";
 
       try {
@@ -70,16 +68,16 @@
 
         if (!response.ok) {
           const error = await response.json();
-          chatBox.innerHTML += <p><strong>GM助手:</strong> ⚠️ 错误：${error.error || "请求失败"}</p>;
+          chatBox.innerHTML += `<p><strong>GM助手:</strong> ⚠️ 错误：${error.error || "请求失败"}</p>`;
           return;
         }
 
         const data = await response.json();
-        chatBox.innerHTML += <p><strong>GM助手:</strong> ${data.reply}</p>;
+        chatBox.innerHTML += `<p><strong>GM助手:</strong> ${data.reply}</p>`;
         chatBox.scrollTop = chatBox.scrollHeight;
 
       } catch (err) {
-        chatBox.innerHTML += <p><strong>GM助手:</strong> ❌ 网络错误：${err.message}</p>;
+        chatBox.innerHTML += `<p><strong>GM助手:</strong> ❌ 网络错误：${err.message}</p>`;
       }
     }
   </script>
