@@ -140,6 +140,7 @@
 
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
+        // 使用 header: 1 获取数组的数组形式，然后手动处理列名
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
         if (!rows || rows.length <= 1) {
@@ -148,17 +149,45 @@
           return;
         }
 
+        // 获取表头，假设第一行是表头
+        const headers = rows[1];
         const uploadResults = [];
         let successCount = 0;
 
         for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          const rowText = row.join(" | ").trim();
+          const rowData = rows[i];
+          const rowText = rowData.join(" | ").trim(); // 保持用于向量化的原始行文本
 
           if (!rowText) {
-            uploadResults.push(`⚠️ 第 ${i} 行为空，跳过`);
+            uploadResults.push(`⚠️ 第 ${i} 行数据为空，跳过`);
             continue;
           }
+
+          // 将行数据映射到 Weaviate 属性
+          const weaviateProperties = {};
+          // 遍历表头，将数据映射到对应的属性名
+          headers.forEach((header, index) => {
+            let value = rowData[index];
+            // 对一些特定的列进行数据类型转换或清洗
+            switch (header.trim()) { // 使用 trim() 确保匹配
+              case "周搜索量":
+              case "现排名":
+              case "展示量":
+              case "点击量":
+              case "SPR":
+              case "标题密度":
+                weaviateProperties[mapHeaderToWeaviateProperty(header)] = parseInt(value) || 0; // 转换为整数，如果无效则为0
+                break;
+              case "PPC价格":
+                weaviateProperties[mapHeaderToWeaviateProperty(header)] = parseFloat(String(value).replace('$', '')) || 0.0; // 移除'$'并转换为浮点数
+                break;
+              default:
+                weaviateProperties[mapHeaderToWeaviateProperty(header)] = String(value || ''); // 确保是字符串
+            }
+          });
+
+          // 添加原始行内容作为向量化的主要内容
+          weaviateProperties.fullRowContent = rowText;
 
           try {
             const res = await fetch(WORKER_URL, {
@@ -166,9 +195,10 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 action: "upload",
-                content: rowText,
+                content: rowText, // 仍然发送原始行文本给Worker生成向量
                 source: file.name,
-                category: sheetName
+                category: weaviateProperties.category || sheetName, // 使用解析出的类目，如果没有则用sheetName
+                properties: weaviateProperties // 新增：发送结构化的属性数据
               })
             });
 
@@ -208,6 +238,31 @@
 
     reader.readAsArrayBuffer(file);
   });
+
+  // 辅助函数：将 Excel 表头映射到 Weaviate 属性名
+  function mapHeaderToWeaviateProperty(header) {
+    switch (header.trim()) {
+      case "关键词": return "keyword";
+      case "关键词翻译": return "keywordTranslation";
+      case "周搜索量": return "weeklySearchVolume";
+      case "现排名": return "currentRank";
+      case "历史排名": return "historyRank";
+      case "周变化量": return "weeklyChangeAmount";
+      case "周变化率": return "weeklyChangeRate";
+      case "PPC价格": return "ppcPrice";
+      case "建议竞价范围": return "suggestedBidRange";
+      case "展示量": return "impressions";
+      case "点击量": return "clicks";
+      case "SPR": return "spr";
+      case "标题密度": return "titleDensity";
+      case "点击集中度": return "clickConcentration";
+      case "转化集中度": return "conversionConcentration";
+      case "点击前三ASIN": return "top3Asin";
+      case "点击前三品牌": return "top3Brand";
+      case "所属类目": return "category"; // 注意：这里使用了 'category'
+      default: return header.trim().replace(/\s+/g, ''); // 移除空格作为默认属性名
+    }
+  }
 </script>
 
 </body>
