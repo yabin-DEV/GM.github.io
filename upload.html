@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>上传 Excel 到向量数据库</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h2>上传 Excel 表格</h2>
+  <input type="file" id="excelInput" accept=".xlsx, .xls" />
+  <div id="log" style="white-space: pre-wrap; margin-top: 10px;"></div>
+
+  <script>
+    const WORKER_URL = "https://your-cloudflare-worker-url"; // 替换为你的 Worker 地址
+
+    document.getElementById("excelInput").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      const log = document.getElementById("log");
+
+      if (!file) {
+        log.textContent = "❌ 没有选择文件";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        const uploadResults = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          const rowText = row.join(" | ");
+
+          const res = await fetch(WORKER_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "upload",
+              content: rowText,
+              source: file.name,
+              category: sheetName
+            })
+          });
+
+          const result = await res.json();
+          uploadResults.push(`第 ${i} 行上传结果：${result.message || result.error}`);
+        }
+
+        log.textContent = uploadResults.join("\n");
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>
