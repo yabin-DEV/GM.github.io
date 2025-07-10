@@ -1,40 +1,37 @@
+html
 <!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GM选品助手</title>
-  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
+<body class="bg-gray-100 text-gray-800 font-sans antialiased">
 
   <div class="max-w-5xl mx-auto p-6 space-y-6">
-    <!-- Header -->
-    <header class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-      <h1 class="text-3xl font-bold text-blue-700">GM选品助手</h1>
-      <div class="flex gap-2">
-        <button onclick="switchPage('form')" class="tab-button active">选品问答</button>
-        <button onclick="switchPage('upload')" class="tab-button">上传 Excel</button>
+    <header class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+      <h1 class="text-3xl font-extrabold text-blue-700 tracking-tight">GM选品助手</h1>
+      <div class="flex gap-2 p-1 bg-gray-200 rounded-lg">
+        <button onclick="switchPage('form', event)" class="tab-button active">选品问答</button>
+        <button onclick="switchPage('upload', event)" class="tab-button">上传 Excel</button>
       </div>
     </header>
 
-    <!-- Chat + Form Section -->
-    <section id="formPage" class="bg-white rounded-xl shadow p-6 space-y-4 page-section">
-      <div id="chatBox" class="space-y-3 overflow-y-auto max-h-[300px] p-3 bg-gray-50 rounded-md border border-gray-200 text-sm">
-        <p>👋 欢迎使用亚马逊蓝海选品助手！我将通过专业选品工具和趋势数据（Amazon、TikTok、Google、Pinterest等）为你挖掘高利润、低竞争、趋势向上的产品机会。</p>
-        <p>在开始之前，请填写以下信息👇</p>
+    <section id="formPage" class="bg-white rounded-xl shadow-lg p-6 space-y-6 page-section block">
+      <div id="chatBox" class="space-y-4 overflow-y-auto max-h-[450px] p-4 bg-gray-50 rounded-lg border border-gray-200 custom-scrollbar">
+        <div class="message ai welcome-message">
+            <p class="mb-2 text-gray-600">👋 欢迎使用亚马逊蓝海选品助手！</p>
+            <p class="text-gray-600">我将通过专业选品工具和趋势数据（Amazon、TikTok、Google、Pinterest等）为你挖掘高利润、低竞争、趋势向上的产品机会。</p>
+            <p class="mt-3 text-gray-600">在开始之前，请填写以下信息👇</p>
+        </div>
       </div>
 
-      <!-- AI Reply Card -->
-      <div id="aiCard" class="hidden bg-white rounded-xl shadow-md p-6">
-        <h3 class="text-xl font-semibold text-blue-700 mb-4">📈 选品分析报告</h3>
-        <div id="aiResponse" class="prose max-w-none text-sm"></div>
-      </div>
-
-      <form id="selectionForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form id="selectionForm" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <div>
-          <label class="block mb-1 font-medium">销售站点：</label>
+          <label class="block mb-1 text-sm font-medium text-gray-700">销售站点：</label>
           <select id="market" class="form-select">
             <option value="美国">🇺🇸 美国</option>
             <option value="日本">🇯🇵 日本</option>
@@ -43,7 +40,7 @@
         </div>
 
         <div>
-          <label class="block mb-1 font-medium">销售节奏：</label>
+          <label class="block mb-1 text-sm font-medium text-gray-700">销售节奏：</label>
           <select id="salesSpeed" class="form-select">
             <option value="短期爆量">短期爆量</option>
             <option value="长期稳定" selected>长期稳定</option>
@@ -51,7 +48,7 @@
         </div>
 
         <div>
-          <label class="block mb-1 font-medium">单品采购成本（美元）：</label>
+          <label class="block mb-1 text-sm font-medium text-gray-700">单品采购成本（美元）：</label>
           <div class="flex gap-2">
             <input type="number" id="costMin" value="50" class="form-input w-1/2" placeholder="最小值" />
             <input type="number" id="costMax" value="100" class="form-input w-1/2" placeholder="最大值" />
@@ -59,26 +56,25 @@
         </div>
 
         <div>
-          <label class="block mb-1 font-medium">期望利润率（%）：</label>
+          <label class="block mb-1 text-sm font-medium text-gray-700">期望利润率（%）：</label>
           <div class="flex gap-2">
             <input type="number" id="profitMin" value="20" class="form-input w-1/2" placeholder="最小%" />
             <input type="number" id="profitMax" class="form-input w-1/2" placeholder="最大%" />
           </div>
         </div>
 
-        <div>
-          <label class="block mb-1 font-medium">偏好类目（多选）：</label>
-          <select id="category" multiple class="form-select h-32">
-            <option value="家居">家居</option>
+        <div class="md:col-span-2"> <label class="block mb-1 text-sm font-medium text-gray-700">偏好类目（多选）：</label>
+          <select id="category" multiple class="form-select h-32 focus:ring-blue-500 focus:border-blue-500 rounded-md">
+            <option value="家居" selected>家居</option>
             <option value="宠物">宠物</option>
-            <option value="厨房" selected>厨房</option>
-            <option value="数码" selected>数码</option>
+            <option value="厨房">厨房</option>
+            <option value="数码">数码</option>
             <option value="户外">户外</option>
           </select>
         </div>
 
         <div>
-          <label class="block mb-1 font-medium">仓储和发货方式：</label>
+          <label class="block mb-1 text-sm font-medium text-gray-700">仓储和发货方式：</label>
           <select id="shipping" class="form-select">
             <option value="FBA">FBA</option>
             <option value="自发货" selected>自发货</option>
@@ -86,8 +82,8 @@
           </select>
         </div>
 
-        <div class="md:col-span-2">
-          <label class="block mb-1 font-medium">是否结合社媒趋势：</label>
+        <div>
+          <label class="block mb-1 text-sm font-medium text-gray-700">是否结合社媒趋势：</label>
           <select id="social" class="form-select">
             <option value="是" selected>是</option>
             <option value="否">否</option>
@@ -95,143 +91,544 @@
         </div>
       </form>
 
-      <button onclick="sendForm()" id="generateBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md w-full sm:w-auto">
+      <button onclick="sendForm()" id="generateBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg w-full sm:w-auto font-semibold transition-colors duration-200 ease-in-out shadow-md hover:shadow-lg mt-6">
         生成选品报告
       </button>
     </section>
 
-    <!-- Upload Section -->
-    <section id="uploadPage" class="bg-white rounded-xl shadow p-6 hidden page-section">
-      <h2 class="text-xl font-semibold mb-4">📊 批量上传 Excel 数据</h2>
-      <div class="flex items-center gap-4 mb-4">
-        <input type="file" id="excelInput" accept=".xlsx,.xls" class="form-input" />
-        <span id="log" class="text-sm text-gray-600"></span>
+    <section id="uploadPage" class="bg-white rounded-xl shadow-lg p-6 hidden page-section">
+      <h2 class="text-2xl font-semibold mb-6 text-gray-700">📊 批量上传知识数据（Excel）</h2>
+      <div class="flex flex-col gap-4 mb-4 items-start">
+        <input type="file" id="excelInput" accept=".xlsx,.xls" class="hidden" />
+        <label for="excelInput" class="inline-flex items-center px-5 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 cursor-pointer transition-colors duration-200">
+          <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M3 4a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V16a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm7 9a1 1 0 100-2v2z" clip-rule="evenodd" />
+          </svg>
+          选择 Excel 文件
+        </label>
+        <div id="log" class="text-sm text-gray-600 p-3 bg-gray-50 rounded-md border border-gray-200 w-full min-h-[100px] overflow-y-auto custom-scrollbar">
+          <p>文件上传日志将显示在这里。</p>
+        </div>
       </div>
     </section>
   </div>
 
   <script>
-    function switchPage(page) {
+    const WORKER_URL = "https://divine-silence-bb95.zhangyabin2000618.workers.dev/"; // Replace with your actual Worker URL
+
+    function switchPage(page, event) {
       document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
       document.getElementById(page + 'Page').classList.remove('hidden');
       document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      if (event && event.target) {
+        event.target.classList.add('active');
+      }
     }
 
-    function appendMessage(sender, text) {
+    // Advanced Markdown to HTML parser
+    function parseMarkdownToHtml(markdownText) {
+        let html = markdownText;
+
+        // Bold text **text**
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Links [text](url)
+        html = html.replace(/\[(.*?)\]\((https?:\/\/[^\s\]]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">$1</a>');
+
+        // Headings (basic support for ## and ###, more could be added)
+        html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+
+        // Horizontal Rule ---
+        html = html.replace(/^-{3,}$/gm, '<hr class="my-4 border-t border-gray-300">');
+
+        // Lists (basic support for unordered lists)
+        html = html.replace(/^\* (.*$)/gm, '<li>$1</li>');
+        if (html.includes('<li>')) {
+            html = `<ul>${html}</ul>`;
+            // Clean up lines that might not be part of the list
+            html = html.replace(/<\/li>\n<li>/g, '</li><li>');
+        }
+
+        // Table parsing (more robust)
+        if (html.includes('|---')) {
+            const lines = html.split('\n');
+            let tableHtml = '';
+            let inTable = false;
+            let headerParsed = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                if (line.startsWith('|') && line.endsWith('|')) {
+                    if (line.includes('---')) { // Separator line
+                        inTable = true;
+                        headerParsed = true;
+                        tableHtml += '<thead><tr>';
+                        const headers = lines[i-1].split('|').map(h => h.trim()).filter(h => h !== '');
+                        headers.forEach(h => tableHtml += `<th class="px-4 py-2 text-left bg-blue-600 text-white font-semibold">${h}</th>`);
+                        tableHtml += '</tr></thead><tbody>';
+                        continue;
+                    } else if (inTable) { // Data row
+                        const cells = line.split('|').map(c => c.trim()).filter(c => c !== '');
+                        tableHtml += '<tr>';
+                        cells.forEach(c => tableHtml += `<td class="border border-gray-300 px-4 py-2">${c}</td>`);
+                        tableHtml += '</tr>';
+                    } else if (!headerParsed && i + 1 < lines.length && lines[i+1].includes('---')) { // Potential header line
+                        // This line is already handled by the separator check
+                    }
+                } else if (inTable) { // End of table
+                    tableHtml += '</tbody></table>';
+                    html = html.replace(lines.slice(lines.indexOf('|---') - (headerParsed ? 1 : 0), i).join('\n'), tableHtml);
+                    inTable = false;
+                    headerParsed = false;
+                    tableHtml = ''; // Reset for next table
+                }
+            }
+            if (inTable) { // If table ends abruptly
+                tableHtml += '</tbody></table>';
+                html = html.replace(lines.slice(lines.indexOf('|---') - (headerParsed ? 1 : 0)).join('\n'), tableHtml);
+            }
+        }
+
+
+        // Convert remaining double newlines to paragraphs
+        html = html.split('\n\n').map(p => {
+            // Only wrap if it's not already a block element (like table, h2, ul, etc.)
+            if (!p.startsWith('<table') && !p.startsWith('<h') && !p.startsWith('<ul') && !p.startsWith('<hr')) {
+                return `<p>${p.replace(/\n/g, '<br>')}</p>`; // Preserve single newlines as <br>
+            }
+            return p;
+        }).join('');
+
+
+        return html;
+    }
+
+
+    // Message appending with Markdown rendering
+    function appendMessage(sender, text, isError = false, isLoading = false) {
       const chatBox = document.getElementById("chatBox");
       const el = document.createElement("div");
-      el.className = `p-3 rounded-md ${sender === 'user' ? 'bg-blue-50 text-blue-900' : 'bg-gray-100 text-gray-800'} shadow-sm`;
-      el.innerHTML = text;
-      chatBox.appendChild(el);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
+      el.className = `message p-3 rounded-lg shadow-sm relative ${sender === 'user' ? 'bg-blue-50 text-blue-900 ml-auto' : 'bg-gray-100 text-gray-800 mr-auto'} max-w-[90%] break-words`; // Added break-words
 
-    function renderAIResponse(markdown) {
-      const card = document.getElementById("aiCard");
-      const container = document.getElementById("aiResponse");
-
-      // Basic Markdown formatting (bold, link, table)
-      let html = markdown
-        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-blue-600 underline" target="_blank">$1</a>');
-
-      // Table formatting
-      if (markdown.includes("|---")) html = parseMarkdownTableToHtml(markdown);
-
-      container.innerHTML = html;
-      card.classList.remove("hidden");
-    }
-
-    function parseMarkdownTableToHtml(markdown) {
-      const lines = markdown.trim().split("\n").filter(l => l.trim() !== "");
-      if (lines.length < 2) return markdown;
-
-      let html = '<table><thead><tr>';
-      const headers = lines[0].split("|").map(h => h.trim()).filter(Boolean);
-      headers.forEach(h => html += `<th>${h}</th>`);
-      html += "</tr></thead><tbody>";
-
-      for (let i = 2; i < lines.length; i++) {
-        const row = lines[i].split("|").map(c => c.trim()).filter(Boolean);
-        html += "<tr>";
-        row.forEach(c => html += `<td>${c}</td>`);
-        html += "</tr>";
+      if (isError) {
+        el.classList.add("bg-red-100", "text-red-800", "border", "border-red-300");
       }
-      html += "</tbody></table>";
-      return html;
+
+      if (isLoading) {
+        el.classList.add("loading-message", "flex", "items-center", "text-gray-500", "italic");
+        el.innerHTML = `
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+          <span>${text}</span>
+        `;
+      } else {
+        el.innerHTML = parseMarkdownToHtml(text); // Use the Markdown parser
+      }
+
+      chatBox.appendChild(el);
+      chatBox.scrollTop = chatBox.scrollHeight; // Scroll to bottom
     }
 
     async function sendForm() {
+      const market = document.getElementById("market");
+      const costMin = document.getElementById("costMin");
+      const costMax = document.getElementById("costMax");
+      const profitMin = document.getElementById("profitMin");
+      const profitMax = document.getElementById("profitMax");
+      const salesSpeed = document.getElementById("salesSpeed");
+      const category = document.getElementById("category");
+      const shipping = document.getElementById("shipping");
+      const social = document.getElementById("social");
+
       const btn = document.getElementById("generateBtn");
       btn.disabled = true;
       btn.textContent = "生成中...";
+      btn.classList.add("opacity-75", "cursor-not-allowed");
+
+      const selectedCategories = [...category.selectedOptions].map(o => o.value).join(", ");
+      const profitMaxVal = profitMax.value || '未设定上限';
 
       const userMsg = `
 销售站点：${market.value}
 成本范围：$${costMin.value} ~ $${costMax.value}
-利润率：${profitMin.value}% ~ ${profitMax.value || '未设定上限'}%
+利润率：${profitMin.value}% ~ ${profitMaxVal}%
 销售节奏：${salesSpeed.value}
-偏好类目：${[...category.selectedOptions].map(o => o.value).join(", ")}
+偏好类目：${selectedCategories}
 仓储方式：${shipping.value}
 社媒趋势判断：${social.value}
-      `.trim();
-
+`;
       appendMessage("user", userMsg);
-      appendMessage("ai", "⏳ 正在生成选品报告...");
+      appendMessage("ai", "正在生成选品报告，请稍候...", false, true); // Loading message
 
       try {
-        const res = await fetch("https://divine-silence-bb95.zhangyabin2000618.workers.dev/", {
+        const res = await fetch(WORKER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: userMsg })
         });
-
         const data = await res.json();
-        document.getElementById("chatBox").lastChild.remove(); // 删除“正在生成”提示
+        const chatBox = document.getElementById("chatBox");
+        // Remove loading message
+        if (chatBox.lastChild && chatBox.lastChild.classList.contains("loading-message")) {
+            chatBox.removeChild(chatBox.lastChild);
+        }
 
-        if (data.reply) {
-          renderAIResponse(data.reply);
+        if (!res.ok || data.error) {
+          appendMessage("ai", `❌ ${data.error || "未知错误"}`, true);
         } else {
-          appendMessage("ai", "⚠️ 暂无有效响应。");
+          appendMessage("ai", data.reply || "无响应");
         }
       } catch (err) {
-        appendMessage("ai", "❌ 请求失败：" + err.message);
+        const chatBox = document.getElementById("chatBox");
+        if (chatBox.lastChild && chatBox.lastChild.classList.contains("loading-message")) {
+            chatBox.removeChild(chatBox.lastChild);
+        }
+        appendMessage("ai", `❌ 请求出错：${err.message}`, true);
       } finally {
         btn.disabled = false;
         btn.textContent = "生成选品报告";
+        btn.classList.remove("opacity-75", "cursor-not-allowed");
       }
     }
 
+    // Excel Upload Logic (unchanged from your original, but added some minor styling classes)
     document.getElementById("excelInput").addEventListener("change", async (e) => {
       const file = e.target.files[0];
       const log = document.getElementById("log");
-      log.textContent = "📤 正在上传...";
-      if (!file) return (log.textContent = "❌ 未选择文件");
+      log.textContent = "";
+      log.classList.remove("text-red-500", "text-green-600"); // Clear previous status colors
+
+      if (!file) {
+        log.textContent = "❌ 未选择文件";
+        log.classList.add("text-red-500");
+        return;
+      }
+
+      log.textContent = "📤 正在解析并上传，请稍候...\n";
+      log.classList.add("text-gray-700");
+
 
       const reader = new FileReader();
+
       reader.onload = async (evt) => {
         try {
-          const workbook = XLSX.read(new Uint8Array(evt.target.result), { type: "array" });
-          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
-          log.textContent = `✅ 已读取 ${rows.length - 1} 行`;
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+          if (!rows || rows.length <= 1) {
+            log.textContent += "❌ 表格中没有有效数据行。\n";
+            log.classList.add("text-red-500");
+            return;
+          }
+
+          const headers = rows[0];
+          const uploadResults = [];
+          let successCount = 0;
+          let failureCount = 0;
+
+          for (let i = 1; i < rows.length; i++) {
+            const rowData = rows[i];
+            const rowText = rowData.join(" | ").trim();
+
+            if (!rowText) {
+              uploadResults.push(`⚠️ 第 ${i} 行数据为空，跳过`);
+              continue;
+            }
+
+            const weaviateProperties = {};
+            headers.forEach((header, index) => {
+              let value = rowData[index];
+              const weaviatePropertyName = mapHeaderToWeaviateProperty(header);
+
+              if (!weaviatePropertyName) {
+                console.warn(`Skipping column '${header}' as its mapped Weaviate property name is invalid or empty.`);
+                return;
+              }
+
+              switch (weaviatePropertyName) {
+                case "weeklySearchVolume":
+                case "currentRank":
+                case "impressions":
+                case "clicks":
+                case "spr":
+                case "titleDensity":
+                  weaviateProperties[weaviatePropertyName] = parseInt(value) || 0;
+                  break;
+                case "ppcPrice":
+                  weaviateProperties[weaviatePropertyName] = parseFloat(String(value || '').replace('$', '')) || 0.0;
+                  break;
+                default:
+                  weaviateProperties[weaviatePropertyName] = String(value || '');
+              }
+            });
+
+            weaviateProperties.fullRowContent = rowText;
+
+            try {
+              const res = await fetch(WORKER_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "upload",
+                  content: rowText,
+                  source: file.name,
+                  category: weaviateProperties.category || sheetName,
+                  properties: weaviateProperties
+                })
+              });
+
+              const result = await res.json();
+
+              if (!res.ok || result.error) {
+                uploadResults.push(`❌ 第 ${i} 行上传失败：${result.error || "未知错误"}`);
+                failureCount++;
+              } else {
+                uploadResults.push(`✅ 第 ${i} 行上传成功`);
+                successCount++;
+              }
+            } catch (err) {
+              uploadResults.push(`❌ 第 ${i} 行请求异常：${err.message}`);
+              failureCount++;
+            }
+          }
+
+          log.innerHTML = `
+            <p class="font-semibold">📦 文件名：${file.name}</p>
+            <p>📑 表格行数：${rows.length - 1}</p>
+            <p class="text-green-600 font-semibold">✅ 成功上传：${successCount}</p>
+            <p class="text-red-500 font-semibold">❌ 失败行数：${failureCount}</p>
+            <div class="mt-4 pt-4 border-t border-gray-200">
+              <h3 class="text-md font-semibold text-gray-700 mb-2">上传详情:</h3>
+              <div class="space-y-1">
+                ${uploadResults.map(msg => `<p class="${msg.startsWith('❌') ? 'text-red-500' : (msg.startsWith('⚠️') ? 'text-yellow-600' : 'text-gray-700')}">${msg}</p>`).join("")}
+              </div>
+            </div>
+          `;
+
+          log.scrollIntoView({ behavior: "smooth" });
+          log.classList.remove("text-gray-700"); // Remove temporary status color
+          log.classList.add("text-green-600"); // Add success color
+
         } catch (err) {
-          log.textContent = "❌ 解析失败：" + err.message;
+          log.textContent = `❌ 文件解析失败：${err.message}`;
+          log.classList.add("text-red-500");
+          log.classList.remove("text-gray-700");
         }
       };
+
+      reader.onerror = () => {
+        log.textContent = "❌ 文件读取失败，请重试";
+        log.classList.add("text-red-500");
+        log.classList.remove("text-gray-700");
+      };
+
       reader.readAsArrayBuffer(file);
     });
+
+    // Helper function: map Excel header to a valid Weaviate property name (unchanged)
+    function mapHeaderToWeaviateProperty(header) {
+      const trimmedHeader = header.trim();
+
+      switch (trimmedHeader) {
+        case "关键词": return "keyword";
+        case "关键词翻译": return "keywordTranslation";
+        case "周搜索量": return "weeklySearchVolume";
+        case "现排名": return "currentRank";
+        case "历史排名": return "historyRank";
+        case "周变化量": return "weeklyChangeAmount";
+        case "周变化率": return "weeklyChangeRate";
+        case "PPC价格": return "ppcPrice";
+        case "建议竞价范围": return "suggestedBidRange";
+        case "展示量": return "impressions";
+        case "点击量": return "clicks";
+        case "SPR": return "spr";
+        case "标题密度": return "titleDensity";
+        case "点击集中度": return "clickConcentration";
+        case "转化集中度": return "conversionConcentration";
+        case "点击前三ASIN": return "top3Asin";
+        case "点击前三品牌": return "top3Brand";
+        case "所属类目": return "category";
+        case "完整行内容": return "fullRowContent";
+        case "来源": return "source";
+        default:
+          let cleanedName = trimmedHeader
+            .replace(/[^\w\s]/g, '')
+            .replace(/\s+/g, '_')
+            .replace(/^_|_$/g, '')
+            .toLowerCase();
+
+          if (/^\d/.test(cleanedName)) {
+            cleanedName = '_' + cleanedName;
+          }
+
+          if (cleanedName.length === 0) {
+            console.warn(`Original header '${header}' resulted in an empty property name.`);
+            return null;
+          }
+          if (!/^[a-z_]/.test(cleanedName)) {
+            cleanedName = '_' + cleanedName;
+          }
+          return cleanedName;
+      }
+    }
   </script>
 
   <style>
+    /* Custom styles that complement Tailwind but provide specific overrides or enhancements */
+    body {
+        font-family: 'Inter', sans-serif;
+    }
     .tab-button {
-      @apply px-4 py-2 rounded-md bg-gray-200 hover:bg-blue-100 text-sm font-medium transition;
+      @apply px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-blue-100 hover:text-blue-700 text-sm font-medium transition-colors duration-200 ease-in-out;
     }
     .tab-button.active {
-      @apply bg-blue-600 text-white;
+      @apply bg-blue-600 text-white shadow-md;
     }
     .form-input, .form-select {
-      @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500;
+      @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-all duration-150 ease-in-out;
+    }
+    .form-select[multiple] {
+        background-image: none; /* Remove default arrow for multiple select */
+        padding-right: 12px; /* Reset padding for multiple select */
+    }
+
+    /* Custom scrollbar for chat and log boxes */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    /* Message styling for chat box */
+    .message {
+        background-color: #e2e8f0; /* Default AI background */
+        color: #2d3748; /* Default text color */
+        padding: 1rem;
+        border-radius: 0.75rem;
+        max-width: 90%;
+        word-wrap: break-word; /* Ensure long words wrap */
+    }
+
+    .message.user {
+        background-color: #dbeafe; /* Light blue for user messages */
+        color: #1e40af;
+        margin-left: auto; /* Align user messages to the right */
+    }
+
+    .message.ai {
+        background-color: #edf2f7; /* Light gray for AI messages */
+        color: #2d3748;
+        margin-right: auto; /* Align AI messages to the left */
+    }
+
+    .message.error {
+        background-color: #fee2e2; /* Light red for error messages */
+        color: #b91c1c;
+        border: 1px solid #ef4444;
+    }
+
+    .message.welcome-message {
+        background-color: #f0f9ff;
+        color: #3b82f6;
+        border: 1px solid #bfdbfe;
+        font-style: italic;
+    }
+
+    /* Loading state styling */
+    .loading-message {
+        color: #6b7280;
+        font-style: italic;
+    }
+
+    /* Markdown elements styling within messages */
+    .message h2, .message h3 {
+        font-weight: 700;
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+        color: #2d3748;
+    }
+    .message h2 {
+        font-size: 1.5em;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 0.3em;
+    }
+    .message h3 {
+        font-size: 1.25em;
+    }
+    .message strong {
+        font-weight: 700;
+        color: #333;
+    }
+    .message a {
+        color: #2563eb;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .message a:hover {
+        text-decoration: underline;
+        color: #1e40af;
+    }
+    .message p {
+        margin-bottom: 0.75em;
+        line-height: 1.6;
+    }
+    .message p:last-child {
+        margin-bottom: 0;
+    }
+    .message ul {
+        list-style-type: disc;
+        margin-left: 1.5em;
+        padding-left: 0.5em;
+        margin-bottom: 1em;
+    }
+    .message li {
+        margin-bottom: 0.5em;
+    }
+
+    /* Table styling within chat messages */
+    .message table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5em 0;
+        font-size: 0.9em;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-radius: 0.5rem;
+        overflow: hidden; /* Ensures rounded corners are visible */
+    }
+
+    .message th, .message td {
+        border: 1px solid #cbd5e0; /* Light gray border */
+        padding: 0.75rem 1rem;
+        text-align: left;
+    }
+
+    .message th {
+        background-color: #3b82f6; /* Blue header background */
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .message tr:nth-child(even) {
+        background-color: #f8fafc; /* Lighter background for even rows */
+    }
+    .message tr:hover {
+        background-color: #eef2ff; /* Slight hover effect on rows */
     }
   </style>
 </body>
