@@ -10,13 +10,11 @@
   <div class="container">
     <h1>GM选品助手</h1>
 
-    <!-- ✅ 页面导航按钮 -->
     <div style="margin-bottom: 20px;">
       <button onclick="switchPage('form')">选品问答</button>
       <button onclick="switchPage('upload')">上传 Excel</button>
     </div>
 
-    <!-- ✅ 页面区域：选品表单 -->
     <div id="formPage" style="display: block;">
       <div class="chat-box" id="chatBox"></div>
 
@@ -75,23 +73,23 @@
       </form>
     </div>
 
-    <!-- ✅ 页面区域：上传 Excel -->
     <div id="uploadPage" style="display: none;">
       <h2>📊 批量上传知识数据（Excel）</h2>
       <input type="file" id="excelInput" accept=".xlsx, .xls" />
       <div id="log" style="white-space: pre-wrap; margin-top: 10px; color: green;"></div>
     </div>
   </div>
-<script>
-  const WORKER_URL = "https://divine-silence-bb95.zhangyabin2000618.workers.dev/";
 
-  function switchPage(page) {
-    document.getElementById("formPage").style.display = (page === 'form') ? 'block' : 'none';
-    document.getElementById("uploadPage").style.display = (page === 'upload') ? 'block' : 'none';
-  }
+  <script>
+    const WORKER_URL = "https://divine-silence-bb95.zhangyabin2000618.workers.dev/";
 
-  function sendForm() {
-    const message = `
+    function switchPage(page) {
+      document.getElementById("formPage").style.display = (page === 'form') ? 'block' : 'none';
+      document.getElementById("uploadPage").style.display = (page === 'upload') ? 'block' : 'none';
+    }
+
+    function sendForm() {
+      const message = `
 销售站点：${document.getElementById("market").value}
 成本范围：$${document.getElementById("costMin").value} ~ $${document.getElementById("costMax").value}
 利润率范围：${document.getElementById("profitMin").value}% ~ ${document.getElementById("profitMax").value || "未填"}%
@@ -101,169 +99,205 @@
 社媒趋势判断：${document.getElementById("social").value}
 `;
 
-    fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message })
-    })
-      .then(res => res.json())
-      .then(data => {
-        const box = document.getElementById("chatBox");
-        box.innerText = data.reply || data.error || "无响应";
+      fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
       })
-      .catch(err => {
-        document.getElementById("chatBox").innerText = "❌ 请求出错：" + err.message;
-      });
-  }
-
-  // ✅ Excel 上传逻辑（带错误捕捉 + 状态提示）
-  document.getElementById("excelInput").addEventListener("change", async (event) => {
-    const file = event.target.files[0];
-    const log = document.getElementById("log");
-    log.style.color = "#000";
-    log.textContent = "";
-
-    if (!file) {
-      log.style.color = "red";
-      log.textContent = "❌ 没有选择文件";
-      return;
+        .then(res => res.json())
+        .then(data => {
+          const box = document.getElementById("chatBox");
+          box.innerText = data.reply || data.error || "无响应";
+        })
+        .catch(err => {
+          document.getElementById("chatBox").innerText = "❌ 请求出错：" + err.message;
+        });
     }
 
-    log.textContent = "📤 正在解析并上传，请稍候...\n";
+    // ✅ Excel 上传逻辑（带错误捕捉 + 状态提示）
+    document.getElementById("excelInput").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      const log = document.getElementById("log");
+      log.style.color = "#000";
+      log.textContent = "";
 
-    const reader = new FileReader();
+      if (!file) {
+        log.style.color = "red";
+        log.textContent = "❌ 没有选择文件";
+        return;
+      }
 
-    reader.onload = async (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
+      log.textContent = "📤 正在解析并上传，请稍候...\n";
 
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        // 使用 header: 1 获取数组的数组形式，然后手动处理列名
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const reader = new FileReader();
 
-        if (!rows || rows.length <= 1) {
-          log.style.color = "red";
-          log.textContent += "❌ 表格中没有有效数据行。\n";
-          return;
-        }
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
 
-        // 获取表头，假设第一行是表头
-        const headers = rows[1];
-        const uploadResults = [];
-        let successCount = 0;
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          // Using header: 1 to get an array of arrays, then manually handle column names.
+          // IMPORTANT: If your first row is the header, you should use `rows[0]` for `headers`.
+          // If your *second* row is the header, then `rows[1]` is correct.
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        for (let i = 1; i < rows.length; i++) {
-          const rowData = rows[i];
-          const rowText = rowData.join(" | ").trim(); // 保持用于向量化的原始行文本
-
-          if (!rowText) {
-            uploadResults.push(`⚠️ 第 ${i} 行数据为空，跳过`);
-            continue;
+          if (!rows || rows.length <= 1) { // Checks if there's at least a header row + one data row
+            log.style.color = "red";
+            log.textContent += "❌ 表格中没有有效数据行。\n";
+            return;
           }
 
-          // 将行数据映射到 Weaviate 属性
-          const weaviateProperties = {};
-          // 遍历表头，将数据映射到对应的属性名
-          headers.forEach((header, index) => {
-            let value = rowData[index];
-            // 对一些特定的列进行数据类型转换或清洗
-            switch (header.trim()) { // 使用 trim() 确保匹配
-              case "周搜索量":
-              case "现排名":
-              case "展示量":
-              case "点击量":
-              case "SPR":
-              case "标题密度":
-                weaviateProperties[mapHeaderToWeaviateProperty(header)] = parseInt(value) || 0; // 转换为整数，如果无效则为0
-                break;
-              case "PPC价格":
-                weaviateProperties[mapHeaderToWeaviateProperty(header)] = parseFloat(String(value).replace('$', '')) || 0.0; // 移除'$'并转换为浮点数
-                break;
-              default:
-                weaviateProperties[mapHeaderToWeaviateProperty(header)] = String(value || ''); // 确保是字符串
+          // Get headers. Assuming the first row (index 0) is the actual header row.
+          const headers = rows[0]; // Changed from rows[1] to rows[0] based on standard Excel format
+          const uploadResults = [];
+          let successCount = 0;
+
+          // Start iterating from the first data row (index 1), skipping the header row
+          for (let i = 1; i < rows.length; i++) {
+            const rowData = rows[i];
+            const rowText = rowData.join(" | ").trim(); // Keep original row text for vectorization
+
+            if (!rowText) {
+              uploadResults.push(`⚠️ 第 ${i} 行数据为空，跳过`);
+              continue;
             }
-          });
 
-          // 添加原始行内容作为向量化的主要内容
-          weaviateProperties.fullRowContent = rowText;
+            // Map row data to Weaviate properties
+            const weaviateProperties = {};
+            // Iterate through headers, mapping data to corresponding property names
+            headers.forEach((header, index) => {
+              let value = rowData[index];
+              const weaviatePropertyName = mapHeaderToWeaviateProperty(header); // Get the cleaned property name
 
-          try {
-            const res = await fetch(WORKER_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                action: "upload",
-                content: rowText, // 仍然发送原始行文本给Worker生成向量
-                source: file.name,
-                category: weaviateProperties.category || sheetName, // 使用解析出的类目，如果没有则用sheetName
-                properties: weaviateProperties // 新增：发送结构化的属性数据
-              })
+              // Skip if the property name is invalid or empty after mapping
+              if (!weaviatePropertyName) {
+                  console.warn(`Skipping column '${header}' as its mapped Weaviate property name is invalid or empty.`);
+                  return; // Skip this iteration of forEach
+              }
+
+              // Type conversion based on the *cleaned* Weaviate property name
+              switch (weaviatePropertyName) {
+                case "weeklySearchVolume":
+                case "currentRank":
+                case "impressions":
+                case "clicks":
+                case "spr":
+                case "titleDensity":
+                  weaviateProperties[weaviatePropertyName] = parseInt(value) || 0; // Convert to integer, 0 if invalid
+                  break;
+                case "ppcPrice":
+                  weaviateProperties[weaviatePropertyName] = parseFloat(String(value || '').replace('$', '')) || 0.0; // Remove '$' and convert to float
+                  break;
+                default:
+                  weaviateProperties[weaviatePropertyName] = String(value || ''); // Ensure it's a string
+              }
             });
 
-            const result = await res.json();
+            // Add original row content as the main content for vectorization
+            weaviateProperties.fullRowContent = rowText;
 
-            if (!res.ok || result.error) {
-              uploadResults.push(`❌ 第 ${i} 行上传失败：${result.error || "未知错误"}`);
-            } else {
-              uploadResults.push(`✅ 第 ${i} 行上传成功`);
-              successCount++;
+            try {
+              const res = await fetch(WORKER_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "upload",
+                  content: rowText, // Still send original row text for worker to generate vector
+                  source: file.name,
+                  category: weaviateProperties.category || sheetName, // Use parsed category, else sheetName
+                  properties: weaviateProperties // New: Send structured property data
+                })
+              });
+
+              const result = await res.json();
+
+              if (!res.ok || result.error) {
+                uploadResults.push(`❌ 第 ${i} 行上传失败：${result.error || "未知错误"}`);
+              } else {
+                uploadResults.push(`✅ 第 ${i} 行上传成功`);
+                successCount++;
+              }
+            } catch (err) {
+              uploadResults.push(`❌ 第 ${i} 行请求异常：${err.message}`);
             }
-          } catch (err) {
-            uploadResults.push(`❌ 第 ${i} 行请求异常：${err.message}`);
           }
+
+          log.innerHTML = `
+            📦 文件名：${file.name}
+            📑 表格行数：${rows.length - 1}
+            ✅ 成功上传：${successCount}
+            ❌ 失败行数：${rows.length - 1 - successCount}
+            \n\n${uploadResults.join("\n")}
+          `.trim();
+
+          log.scrollIntoView({ behavior: "smooth" });
+
+        } catch (err) {
+          log.style.color = "red";
+          log.textContent = `❌ 文件解析失败：${err.message}`;
         }
+      };
 
-        log.innerHTML = `
-          📦 文件名：${file.name}
-          📑 表格行数：${rows.length - 1}
-          ✅ 成功上传：${successCount}
-          ❌ 失败行数：${rows.length - 1 - successCount}
-          \n\n${uploadResults.join("\n")}
-        `.trim();
-
-        log.scrollIntoView({ behavior: "smooth" });
-
-      } catch (err) {
+      reader.onerror = () => {
         log.style.color = "red";
-        log.textContent = `❌ 文件解析失败：${err.message}`;
+        log.textContent = "❌ 文件读取失败，请重试";
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+
+    // ✅ Helper function: map Excel header to a valid Weaviate property name
+    // This is the robust version that handles Chinese characters and GraphQL naming rules.
+    function mapHeaderToWeaviateProperty(header) {
+      const trimmedHeader = header.trim();
+
+      switch (trimmedHeader) {
+        case "关键词": return "keyword";
+        case "关键词翻译": return "keywordTranslation";
+        case "周搜索量": return "weeklySearchVolume";
+        case "现排名": return "currentRank";
+        case "历史排名": return "historyRank";
+        case "周变化量": return "weeklyChangeAmount";
+        case "周变化率": return "weeklyChangeRate";
+        case "PPC价格": return "ppcPrice";
+        case "建议竞价范围": return "suggestedBidRange";
+        case "展示量": return "impressions";
+        case "点击量": return "clicks";
+        case "SPR": return "spr";
+        case "标题密度": return "titleDensity";
+        case "点击集中度": return "clickConcentration";
+        case "转化集中度": return "conversionConcentration";
+        case "点击前三ASIN": return "top3Asin";
+        case "点击前三品牌": return "top3Brand";
+        case "所属类目": return "category";
+        case "完整行内容": return "fullRowContent";
+        case "来源": return "source";
+        default:
+          // Fallback for unexpected headers: clean aggressively
+          let cleanedName = trimmedHeader
+            .replace(/[^\w\s]/g, '') // Remove non-word characters (includes punctuation, special symbols)
+            .replace(/\s+/g, '_')   // Replace spaces with underscores
+            .replace(/^_|_$/g, '')  // Remove leading/trailing underscores from replacements
+            .toLowerCase();         // Convert to lower case for consistency
+
+          // Prepend underscore if it starts with a number
+          if (/^\d/.test(cleanedName)) {
+            cleanedName = '_' + cleanedName;
+          }
+
+          // Ensure it's not empty and starts with a letter/underscore
+          if (cleanedName.length === 0) {
+            console.warn(`Original header '${header}' resulted in an empty property name.`);
+            return null; // Indicate invalid property name
+          }
+          if (!/^[a-z_]/.test(cleanedName)) {
+            cleanedName = '_' + cleanedName;
+          }
+          return cleanedName;
       }
-    };
-
-    reader.onerror = () => {
-      log.style.color = "red";
-      log.textContent = "❌ 文件读取失败，请重试";
-    };
-
-    reader.readAsArrayBuffer(file);
-  });
-
-  // 辅助函数：将 Excel 表头映射到 Weaviate 属性名
-  function mapHeaderToWeaviateProperty(header) {
-    switch (header.trim()) {
-      case "关键词": return "keyword";
-      case "关键词翻译": return "keywordTranslation";
-      case "周搜索量": return "weeklySearchVolume";
-      case "现排名": return "currentRank";
-      case "历史排名": return "historyRank";
-      case "周变化量": return "weeklyChangeAmount";
-      case "周变化率": return "weeklyChangeRate";
-      case "PPC价格": return "ppcPrice";
-      case "建议竞价范围": return "suggestedBidRange";
-      case "展示量": return "impressions";
-      case "点击量": return "clicks";
-      case "SPR": return "spr";
-      case "标题密度": return "titleDensity";
-      case "点击集中度": return "clickConcentration";
-      case "转化集中度": return "conversionConcentration";
-      case "点击前三ASIN": return "top3Asin";
-      case "点击前三品牌": return "top3Brand";
-      case "所属类目": return "category"; // 注意：这里使用了 'category'
-      default: return header.trim().replace(/\s+/g, ''); // 移除空格作为默认属性名
     }
-  }
-</script>
-
+  </script>
 </body>
 </html>
