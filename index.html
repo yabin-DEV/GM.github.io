@@ -1,4 +1,3 @@
-html
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -125,82 +124,74 @@ html
       }
     }
 
-    // Advanced Markdown to HTML parser
+    // Simplified Markdown to HTML parser for bold, links, and tables
     function parseMarkdownToHtml(markdownText) {
         let html = markdownText;
 
-        // Bold text **text**
+        // Replace "**text**" with "<strong>text</strong>"
         html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-        // Links [text](url)
+        // Replace "[text](url)" with "<a href='url' target='_blank'>text</a>"
         html = html.replace(/\[(.*?)\]\((https?:\/\/[^\s\]]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">$1</a>');
 
-        // Headings (basic support for ## and ###, more could be added)
-        html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-        html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-
-        // Horizontal Rule ---
-        html = html.replace(/^-{3,}$/gm, '<hr class="my-4 border-t border-gray-300">');
-
-        // Lists (basic support for unordered lists)
-        html = html.replace(/^\* (.*$)/gm, '<li>$1</li>');
-        if (html.includes('<li>')) {
-            html = `<ul>${html}</ul>`;
-            // Clean up lines that might not be part of the list
-            html = html.replace(/<\/li>\n<li>/g, '</li><li>');
-        }
-
-        // Table parsing (more robust)
+        // Handle tables
         if (html.includes('|---')) {
             const lines = html.split('\n');
             let tableHtml = '';
             let inTable = false;
-            let headerParsed = false;
+            let headerRow = '';
+            let separatorRowIndex = -1;
 
+            // Find table start and header
             for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-
-                if (line.startsWith('|') && line.endsWith('|')) {
-                    if (line.includes('---')) { // Separator line
-                        inTable = true;
-                        headerParsed = true;
-                        tableHtml += '<thead><tr>';
-                        const headers = lines[i-1].split('|').map(h => h.trim()).filter(h => h !== '');
-                        headers.forEach(h => tableHtml += `<th class="px-4 py-2 text-left bg-blue-600 text-white font-semibold">${h}</th>`);
-                        tableHtml += '</tr></thead><tbody>';
-                        continue;
-                    } else if (inTable) { // Data row
-                        const cells = line.split('|').map(c => c.trim()).filter(c => c !== '');
-                        tableHtml += '<tr>';
-                        cells.forEach(c => tableHtml += `<td class="border border-gray-300 px-4 py-2">${c}</td>`);
-                        tableHtml += '</tr>';
-                    } else if (!headerParsed && i + 1 < lines.length && lines[i+1].includes('---')) { // Potential header line
-                        // This line is already handled by the separator check
-                    }
-                } else if (inTable) { // End of table
-                    tableHtml += '</tbody></table>';
-                    html = html.replace(lines.slice(lines.indexOf('|---') - (headerParsed ? 1 : 0), i).join('\n'), tableHtml);
-                    inTable = false;
-                    headerParsed = false;
-                    tableHtml = ''; // Reset for next table
+                if (lines[i].includes('|---')) {
+                    separatorRowIndex = i;
+                    headerRow = lines[i - 1]; // Assume header is the line before '---'
+                    break;
                 }
             }
-            if (inTable) { // If table ends abruptly
+
+            if (separatorRowIndex !== -1 && headerRow) {
+                const headerCells = headerRow.split('|').map(h => h.trim()).filter(h => h !== '');
+                tableHtml += '<table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden shadow mb-4">';
+                tableHtml += '<thead class="bg-blue-600 text-white"><tr>';
+                headerCells.forEach(h => tableHtml += `<th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider">${h}</th>`);
+                tableHtml += '</tr></thead>';
+                tableHtml += '<tbody class="bg-white divide-y divide-gray-200">';
+
+                for (let i = separatorRowIndex + 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line.startsWith('|') && line.endsWith('|')) {
+                        const cells = line.split('|').map(c => c.trim()).filter(c => c !== '');
+                        tableHtml += '<tr>';
+                        cells.forEach(c => tableHtml += `<td class="px-4 py-2 whitespace-normal text-sm text-gray-700">${c}</td>`);
+                        tableHtml += '</tr>';
+                    } else {
+                        // End of table or non-table content
+                        break;
+                    }
+                }
                 tableHtml += '</tbody></table>';
-                html = html.replace(lines.slice(lines.indexOf('|---') - (headerParsed ? 1 : 0)).join('\n'), tableHtml);
+
+                // Replace the markdown table with HTML table
+                const markdownTableRegex = new RegExp(`${headerRow.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\n\\|---[\\s\\S]*?(?=\\n[^|]|$|$)`, 'm');
+                html = html.replace(markdownTableRegex, tableHtml);
             }
         }
 
-
-        // Convert remaining double newlines to paragraphs
-        html = html.split('\n\n').map(p => {
-            // Only wrap if it's not already a block element (like table, h2, ul, etc.)
-            if (!p.startsWith('<table') && !p.startsWith('<h') && !p.startsWith('<ul') && !p.startsWith('<hr')) {
-                return `<p>${p.replace(/\n/g, '<br>')}</p>`; // Preserve single newlines as <br>
+        // Convert remaining newlines to <br> for simple paragraph formatting
+        html = html.split('\n').map(line => {
+            // Avoid wrapping lines that are already part of other HTML tags like <table>
+            if (!line.trim().startsWith('<table') && !line.trim().startsWith('<th') && !line.trim().startsWith('<td') && !line.trim().startsWith('<tr') && !line.trim().startsWith('<div')) {
+                return line.trim() ? `<p>${line}</p>` : ''; // Wrap non-empty lines in <p>
             }
-            return p;
+            return line;
         }).join('');
 
+        // Remove empty paragraph tags if any
+        html = html.replace(/<p>\s*<\/p>/g, '');
+        // Remove empty table tags if any parsing went wrong (safety)
+        html = html.replace(/<table[^>]*><\/table>/g, '');
 
         return html;
     }
@@ -555,20 +546,6 @@ html
     }
 
     /* Markdown elements styling within messages */
-    .message h2, .message h3 {
-        font-weight: 700;
-        margin-top: 1.5em;
-        margin-bottom: 0.5em;
-        color: #2d3748;
-    }
-    .message h2 {
-        font-size: 1.5em;
-        border-bottom: 1px solid #e2e8f0;
-        padding-bottom: 0.3em;
-    }
-    .message h3 {
-        font-size: 1.25em;
-    }
     .message strong {
         font-weight: 700;
         color: #333;
@@ -588,15 +565,6 @@ html
     }
     .message p:last-child {
         margin-bottom: 0;
-    }
-    .message ul {
-        list-style-type: disc;
-        margin-left: 1.5em;
-        padding-left: 0.5em;
-        margin-bottom: 1em;
-    }
-    .message li {
-        margin-bottom: 0.5em;
     }
 
     /* Table styling within chat messages */
