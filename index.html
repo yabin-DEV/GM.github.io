@@ -4,68 +4,166 @@
   <meta charset="UTF-8">
   <title>GM选品助手</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="container">
     <h1>GM选品助手</h1>
 
-    <div class="chat-box" id="chatBox"></div>
+    <!-- ✅ 页面导航按钮 -->
+    <div style="margin-bottom: 20px;">
+      <button onclick="switchPage('form')">选品问答</button>
+      <button onclick="switchPage('upload')">上传 Excel</button>
+    </div>
 
-    <form id="selectionForm">
-      <label>销售站点：
-        <select id="market">
-          <option value="美国" selected>🇺🇸 美国</option>
-          <option value="日本">🇯🇵 日本</option>
-          <option value="德国">🇩🇪 德国</option>
-        </select>
-      </label>
+    <!-- ✅ 页面区域：选品表单 -->
+    <div id="formPage" style="display: block;">
+      <div class="chat-box" id="chatBox"></div>
 
-      <label>单品采购成本范围（美元）：
-        <input type="number" id="costMin" value="50" placeholder="最小值">
-        <input type="number" id="costMax" value="100" placeholder="最大值">
-      </label>
+      <form id="selectionForm">
+        <label>销售站点：
+          <select id="market">
+            <option value="美国" selected>🇺🇸 美国</option>
+            <option value="日本">🇯🇵 日本</option>
+            <option value="德国">🇩🇪 德国</option>
+          </select>
+        </label>
 
-      <label>期望利润率范围（%）：
-        <input type="number" id="profitMin" value="20" placeholder="最小%">
-        <input type="number" id="profitMax" placeholder="最大%">
-      </label>
+        <label>单品采购成本范围（美元）：
+          <input type="number" id="costMin" value="50" placeholder="最小值">
+          <input type="number" id="costMax" value="100" placeholder="最大值">
+        </label>
 
-      <label>销售节奏：
-        <select id="salesSpeed">
-          <option value="短期爆量">❶ 短期爆量</option>
-          <option value="长期稳定" selected>❷ 长期稳定</option>
-        </select>
-      </label>
+        <label>期望利润率范围（%）：
+          <input type="number" id="profitMin" value="20" placeholder="最小%">
+          <input type="number" id="profitMax" placeholder="最大%">
+        </label>
 
-      <label>偏好类目（可多选）：
-        <select id="category" multiple size="5">
-          <option value="家居" selected>家居</option>
-          <option value="宠物">宠物</option>
-          <option value="厨房">厨房</option>
-          <option value="数码">数码</option>
-          <option value="户外">户外</option>
-        </select>
-      </label>
+        <label>销售节奏：
+          <select id="salesSpeed">
+            <option value="短期爆量">❶ 短期爆量</option>
+            <option value="长期稳定" selected>❷ 长期稳定</option>
+          </select>
+        </label>
 
-      <label>仓储和发货方式：
-        <select id="shipping">
-          <option value="FBA">❶ FBA</option>
-          <option value="自发货" selected>❷ 自发货</option>
-          <option value="海外仓">❸ 海外仓</option>
-        </select>
-      </label>
+        <label>偏好类目（可多选）：
+          <select id="category" multiple size="5">
+            <option value="家居" selected>家居</option>
+            <option value="宠物">宠物</option>
+            <option value="厨房">厨房</option>
+            <option value="数码">数码</option>
+            <option value="户外">户外</option>
+          </select>
+        </label>
 
-      <label>结合社媒趋势判断：
-        <select id="social">
-          <option value="是" selected>是</option>
-          <option value="否">否</option>
-        </select>
-      </label>
+        <label>仓储和发货方式：
+          <select id="shipping">
+            <option value="FBA">❶ FBA</option>
+            <option value="自发货" selected>❷ 自发货</option>
+            <option value="海外仓">❸ 海外仓</option>
+          </select>
+        </label>
 
-      <button type="button" onclick="sendForm()">发送</button>
-    </form>
+        <label>结合社媒趋势判断：
+          <select id="social">
+            <option value="是" selected>是</option>
+            <option value="否">否</option>
+          </select>
+        </label>
+
+        <button type="button" onclick="sendForm()">发送</button>
+      </form>
+    </div>
+
+    <!-- ✅ 页面区域：上传 Excel -->
+    <div id="uploadPage" style="display: none;">
+      <h2>📊 批量上传知识数据（Excel）</h2>
+      <input type="file" id="excelInput" accept=".xlsx, .xls" />
+      <div id="log" style="white-space: pre-wrap; margin-top: 10px; color: green;"></div>
+    </div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    const WORKER_URL = "https://your-cloudflare-worker-url"; // ⬅ 替换为你的 Worker 地址
+
+    // ✅ 切换页面显示
+    function switchPage(page) {
+      document.getElementById("formPage").style.display = (page === 'form') ? 'block' : 'none';
+      document.getElementById("uploadPage").style.display = (page === 'upload') ? 'block' : 'none';
+    }
+
+    // ✅ 表单发送逻辑
+    function sendForm() {
+      const message = `
+销售站点：${document.getElementById("market").value}
+成本范围：$${document.getElementById("costMin").value} ~ $${document.getElementById("costMax").value}
+利润率范围：${document.getElementById("profitMin").value}% ~ ${document.getElementById("profitMax").value || "未填"}%
+销售节奏：${document.getElementById("salesSpeed").value}
+偏好类目：${[...document.getElementById("category").selectedOptions].map(o => o.value).join(", ")}
+仓储方式：${document.getElementById("shipping").value}
+社媒趋势判断：${document.getElementById("social").value}
+`;
+
+      fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      })
+        .then(res => res.json())
+        .then(data => {
+          const box = document.getElementById("chatBox");
+          box.innerText = data.reply || data.error || "无响应";
+        })
+        .catch(err => {
+          document.getElementById("chatBox").innerText = "❌ 请求出错：" + err.message;
+        });
+    }
+
+    // ✅ Excel 上传逻辑
+    document.getElementById("excelInput").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      const log = document.getElementById("log");
+
+      if (!file) {
+        log.textContent = "❌ 没有选择文件";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        const uploadResults = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          const rowText = row.join(" | ");
+
+          const res = await fetch(WORKER_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "upload",
+              content: rowText,
+              source: file.name,
+              category: sheetName
+            })
+          });
+
+          const result = await res.json();
+          uploadResults.push(`第 ${i} 行上传结果：${result.message || result.error}`);
+        }
+
+        log.textContent = uploadResults.join("\n");
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
 </body>
 </html>
