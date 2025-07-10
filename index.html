@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GM选品助手</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
@@ -21,9 +21,15 @@
 
     <!-- Chat + Form Section -->
     <section id="formPage" class="bg-white rounded-xl shadow p-6 space-y-4 page-section">
-      <div id="chatBox" class="space-y-3 overflow-y-auto max-h-[400px] p-3 bg-gray-50 rounded-md border border-gray-200">
-        <p class="text-sm">👋 欢迎使用亚马逊蓝海选品助手！我将通过专业选品工具和趋势数据（Amazon、TikTok、Google、Pinterest等）为你挖掘高利润、低竞争、趋势向上的产品机会。</p>
-        <p class="text-sm">在开始之前，请填写以下信息👇</p>
+      <div id="chatBox" class="space-y-3 overflow-y-auto max-h-[300px] p-3 bg-gray-50 rounded-md border border-gray-200 text-sm">
+        <p>👋 欢迎使用亚马逊蓝海选品助手！我将通过专业选品工具和趋势数据（Amazon、TikTok、Google、Pinterest等）为你挖掘高利润、低竞争、趋势向上的产品机会。</p>
+        <p>在开始之前，请填写以下信息👇</p>
+      </div>
+
+      <!-- AI Reply Card -->
+      <div id="aiCard" class="hidden bg-white rounded-xl shadow-md p-6">
+        <h3 class="text-xl font-semibold text-blue-700 mb-4">📈 选品分析报告</h3>
+        <div id="aiResponse" class="prose max-w-none text-sm"></div>
       </div>
 
       <form id="selectionForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -63,10 +69,10 @@
         <div>
           <label class="block mb-1 font-medium">偏好类目（多选）：</label>
           <select id="category" multiple class="form-select h-32">
-            <option value="家居" selected>家居</option>
+            <option value="家居">家居</option>
             <option value="宠物">宠物</option>
-            <option value="厨房">厨房</option>
-            <option value="数码">数码</option>
+            <option value="厨房" selected>厨房</option>
+            <option value="数码" selected>数码</option>
             <option value="户外">户外</option>
           </select>
         </div>
@@ -105,7 +111,6 @@
   </div>
 
   <script>
-    // 切换页面显示
     function switchPage(page) {
       document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
       document.getElementById(page + 'Page').classList.remove('hidden');
@@ -113,7 +118,6 @@
       event.target.classList.add('active');
     }
 
-    // 消息追加
     function appendMessage(sender, text) {
       const chatBox = document.getElementById("chatBox");
       const el = document.createElement("div");
@@ -121,6 +125,41 @@
       el.innerHTML = text;
       chatBox.appendChild(el);
       chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function renderAIResponse(markdown) {
+      const card = document.getElementById("aiCard");
+      const container = document.getElementById("aiResponse");
+
+      // Basic Markdown formatting (bold, link, table)
+      let html = markdown
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-blue-600 underline" target="_blank">$1</a>');
+
+      // Table formatting
+      if (markdown.includes("|---")) html = parseMarkdownTableToHtml(markdown);
+
+      container.innerHTML = html;
+      card.classList.remove("hidden");
+    }
+
+    function parseMarkdownTableToHtml(markdown) {
+      const lines = markdown.trim().split("\n").filter(l => l.trim() !== "");
+      if (lines.length < 2) return markdown;
+
+      let html = '<table><thead><tr>';
+      const headers = lines[0].split("|").map(h => h.trim()).filter(Boolean);
+      headers.forEach(h => html += `<th>${h}</th>`);
+      html += "</tr></thead><tbody>";
+
+      for (let i = 2; i < lines.length; i++) {
+        const row = lines[i].split("|").map(c => c.trim()).filter(Boolean);
+        html += "<tr>";
+        row.forEach(c => html += `<td>${c}</td>`);
+        html += "</tr>";
+      }
+      html += "</tbody></table>";
+      return html;
     }
 
     async function sendForm() {
@@ -136,7 +175,8 @@
 偏好类目：${[...category.selectedOptions].map(o => o.value).join(", ")}
 仓储方式：${shipping.value}
 社媒趋势判断：${social.value}
-      `;
+      `.trim();
+
       appendMessage("user", userMsg);
       appendMessage("ai", "⏳ 正在生成选品报告...");
 
@@ -146,17 +186,23 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: userMsg })
         });
+
         const data = await res.json();
-        appendMessage("ai", data.reply || "✅ 报告生成完成。");
+        document.getElementById("chatBox").lastChild.remove(); // 删除“正在生成”提示
+
+        if (data.reply) {
+          renderAIResponse(data.reply);
+        } else {
+          appendMessage("ai", "⚠️ 暂无有效响应。");
+        }
       } catch (err) {
-        appendMessage("ai", "❌ 请求出错：" + err.message);
+        appendMessage("ai", "❌ 请求失败：" + err.message);
       } finally {
         btn.disabled = false;
         btn.textContent = "生成选品报告";
       }
     }
 
-    // Excel 上传
     document.getElementById("excelInput").addEventListener("change", async (e) => {
       const file = e.target.files[0];
       const log = document.getElementById("log");
