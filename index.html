@@ -82,19 +82,16 @@
       <div id="log" style="white-space: pre-wrap; margin-top: 10px; color: green;"></div>
     </div>
   </div>
+<script>
+  const WORKER_URL = "https://divine-silence-bb95.zhangyabin2000618.workers.dev/";
 
-  <script>
-    const WORKER_URL = "https://divine-silence-bb95.zhangyabin2000618.workers.dev/"; // ⬅ 替换为你的 Worker 地址
+  function switchPage(page) {
+    document.getElementById("formPage").style.display = (page === 'form') ? 'block' : 'none';
+    document.getElementById("uploadPage").style.display = (page === 'upload') ? 'block' : 'none';
+  }
 
-    // ✅ 切换页面显示
-    function switchPage(page) {
-      document.getElementById("formPage").style.display = (page === 'form') ? 'block' : 'none';
-      document.getElementById("uploadPage").style.display = (page === 'upload') ? 'block' : 'none';
-    }
-
-    // ✅ 表单发送逻辑
-    function sendForm() {
-      const message = `
+  function sendForm() {
+    const message = `
 销售站点：${document.getElementById("market").value}
 成本范围：$${document.getElementById("costMin").value} ~ $${document.getElementById("costMax").value}
 利润率范围：${document.getElementById("profitMin").value}% ~ ${document.getElementById("profitMax").value || "未填"}%
@@ -104,33 +101,40 @@
 社媒趋势判断：${document.getElementById("social").value}
 `;
 
-      fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message })
+    fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message })
+    })
+      .then(res => res.json())
+      .then(data => {
+        const box = document.getElementById("chatBox");
+        box.innerText = data.reply || data.error || "无响应";
       })
-        .then(res => res.json())
-        .then(data => {
-          const box = document.getElementById("chatBox");
-          box.innerText = data.reply || data.error || "无响应";
-        })
-        .catch(err => {
-          document.getElementById("chatBox").innerText = "❌ 请求出错：" + err.message;
-        });
+      .catch(err => {
+        document.getElementById("chatBox").innerText = "❌ 请求出错：" + err.message;
+      });
+  }
+
+  // ✅ Excel 上传逻辑（带错误捕捉 + 状态提示）
+  document.getElementById("excelInput").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    const log = document.getElementById("log");
+    log.style.color = "#000";
+    log.textContent = "";
+
+    if (!file) {
+      log.style.color = "red";
+      log.textContent = "❌ 没有选择文件";
+      return;
     }
 
-    // ✅ Excel 上传逻辑
-    document.getElementById("excelInput").addEventListener("change", async (event) => {
-      const file = event.target.files[0];
-      const log = document.getElementById("log");
+    log.textContent = "📤 正在解析并上传，请稍候...\n";
 
-      if (!file) {
-        log.textContent = "❌ 没有选择文件";
-        return;
-      }
+    const reader = new FileReader();
 
-      const reader = new FileReader();
-      reader.onload = async (e) => {
+    reader.onload = async (e) => {
+      try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array" });
 
@@ -138,32 +142,73 @@
         const sheet = workbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
+        if (!rows || rows.length <= 1) {
+          log.style.color = "red";
+          log.textContent += "❌ 表格中没有有效数据行。\n";
+          return;
+        }
+
         const uploadResults = [];
+        let successCount = 0;
 
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
-          const rowText = row.join(" | ");
+          const rowText = row.join(" | ").trim();
 
-          const res = await fetch(WORKER_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "upload",
-              content: rowText,
-              source: file.name,
-              category: sheetName
-            })
-          });
+          if (!rowText) {
+            uploadResults.push(`⚠️ 第 ${i} 行为空，跳过`);
+            continue;
+          }
 
-          const result = await res.json();
-          uploadResults.push(`第 ${i} 行上传结果：${result.message || result.error}`);
+          try {
+            const res = await fetch(WORKER_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "upload",
+                content: rowText,
+                source: file.name,
+                category: sheetName
+              })
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || result.error) {
+              uploadResults.push(`❌ 第 ${i} 行上传失败：${result.error || "未知错误"}`);
+            } else {
+              uploadResults.push(`✅ 第 ${i} 行上传成功`);
+              successCount++;
+            }
+          } catch (err) {
+            uploadResults.push(`❌ 第 ${i} 行请求异常：${err.message}`);
+          }
         }
 
-        log.textContent = uploadResults.join("\n");
-      };
+        log.innerHTML = `
+          📦 文件名：${file.name}
+          📑 表格行数：${rows.length - 1}
+          ✅ 成功上传：${successCount}
+          ❌ 失败行数：${rows.length - 1 - successCount}
+          \n\n${uploadResults.join("\n")}
+        `.trim();
 
-      reader.readAsArrayBuffer(file);
-    });
-  </script>
+        log.scrollIntoView({ behavior: "smooth" });
+
+      } catch (err) {
+        log.style.color = "red";
+        log.textContent = `❌ 文件解析失败：${err.message}`;
+      }
+    };
+
+    reader.onerror = () => {
+      log.style.color = "red";
+      log.textContent = "❌ 文件读取失败，请重试";
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+</script>
+
 </body>
 </html>
